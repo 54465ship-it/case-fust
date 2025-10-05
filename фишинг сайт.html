@@ -1,0 +1,64 @@
+// server.js
+const express = require('express');
+const session = require('express-session');
+const passport = require('passport');
+const SteamStrategy = require('passport-steam').Strategy;
+
+const app = express();
+
+// Настройка сессий
+app.use(session({
+    secret: 'your-secret-key',
+    resave: false,
+    saveUninitialized: true
+}));
+
+// Инициализация Passport
+app.use(passport.initialize());
+app.use(passport.session());
+
+// Steam Strategy
+passport.use(new SteamStrategy({
+    returnURL: 'http://localhost:3000/auth/steam/return',
+    realm: 'http://localhost:3000/',
+    apiKey: 'YOUR_STEAM_API_KEY' // Получите на https://steamcommunity.com/dev/apikey
+},
+function(identifier, profile, done) {
+    // Здесь вы можете сохранить пользователя в БД
+    return done(null, profile);
+}));
+
+passport.serializeUser(function(user, done) {
+    done(null, user);
+});
+
+passport.deserializeUser(function(obj, done) {
+    done(null, obj);
+});
+
+// Маршруты
+app.get('/', (req, res) => {
+    res.sendFile(__dirname + '/index.html');
+});
+
+app.get('/auth/steam',
+    passport.authenticate('steam'),
+    function(req, res) {
+        // Перенаправление будет обработано Steam
+    });
+
+app.get('/auth/steam/return',
+    passport.authenticate('steam', { failureRedirect: '/' }),
+    function(req, res) {
+        // Успешная аутентификация
+        res.redirect('/');
+    });
+
+app.get('/logout', function(req, res){
+    req.logout();
+    res.redirect('/');
+});
+
+app.listen(3000, () => {
+    console.log('Server running on port 3000');
+});
